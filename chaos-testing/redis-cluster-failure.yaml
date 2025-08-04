@@ -1,0 +1,82 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: redis-cluster-network-partition
+  namespace: chaos-testing
+spec:
+  action: partition
+  mode: fixed-percent
+  value: "50"
+  selector:
+    namespaces:
+      - redis
+    labelSelectors:
+      app: redis-cluster
+  duration: "3m"
+  scheduler:
+    cron: "@every 25m"
+  networkDelay:
+    latency: "200ms"
+    correlation: "100"
+    jitter: "50ms"
+---
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: redis-master-failure
+  namespace: chaos-testing
+spec:
+  action: pod-failure
+  mode: one
+  selector:
+    namespaces:
+      - redis
+    labelSelectors:
+      app: redis-cluster
+      role: master
+  duration: "1m"
+  scheduler:
+    cron: "@every 10m"
+---
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: redis-memory-stress
+  namespace: chaos-testing
+spec:
+  mode: one
+  selector:
+    namespaces:
+      - redis
+    labelSelectors:
+      app: redis-cluster
+  stressors:
+    memory:
+      workers: 1
+      size: "1GB"
+  duration: "2m"
+  scheduler:
+    cron: "@every 15m"
+---
+apiVersion: chaos-mesh.org/v1alpha1
+kind: IOChaos
+metadata:
+  name: redis-disk-io-delay
+  namespace: chaos-testing
+spec:
+  action: latency
+  mode: one
+  selector:
+    namespaces:
+      - redis
+    labelSelectors:
+      app: redis-cluster
+  duration: "4m"
+  scheduler:
+    cron: "@every 30m"
+  ioLatency:
+    latency: "100ms"
+    correlation: "100"
+    jitter: "0ms"
+  path: "/data"
+  percent: 100 

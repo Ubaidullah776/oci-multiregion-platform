@@ -1,0 +1,216 @@
+groups:
+  - name: microservices-slo-alerts
+    rules:
+      # Availability Alerts
+      - alert: ServiceDown
+        expr: up{job="springboot-microservice"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          priority: p0
+        annotations:
+          summary: "Service {{ $labels.instance }} is down"
+          description: "Service {{ $labels.instance }} has been down for more than 1 minute"
+
+      - alert: HighErrorRate
+        expr: (sum(rate(http_requests_total{status=~"4..|5.."}[5m])) / sum(rate(http_requests_total[5m]))) * 100 > 5
+        for: 2m
+        labels:
+          severity: warning
+          priority: p1
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }}% (threshold: 5%)"
+
+      - alert: CriticalErrorRate
+        expr: (sum(rate(http_requests_total{status=~"4..|5.."}[5m])) / sum(rate(http_requests_total[5m]))) * 100 > 10
+        for: 1m
+        labels:
+          severity: critical
+          priority: p0
+        annotations:
+          summary: "Critical error rate detected"
+          description: "Error rate is {{ $value }}% (threshold: 10%)"
+
+      # Latency Alerts
+      - alert: HighResponseTimeP95
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          priority: p1
+        annotations:
+          summary: "High P95 response time"
+          description: "P95 response time is {{ $value }}s (threshold: 0.5s)"
+
+      - alert: CriticalResponseTimeP99
+        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 2m
+        labels:
+          severity: critical
+          priority: p0
+        annotations:
+          summary: "Critical P99 response time"
+          description: "P99 response time is {{ $value }}s (threshold: 1s)"
+
+      # Throughput Alerts
+      - alert: LowRequestRate
+        expr: sum(rate(http_requests_total[1m])) < 500
+        for: 5m
+        labels:
+          severity: warning
+          priority: p1
+        annotations:
+          summary: "Low request rate detected"
+          description: "Request rate is {{ $value }} RPS (threshold: 500 RPS)"
+
+      # Database Alerts
+      - alert: DatabaseConnectionPoolHigh
+        expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections * 100 > 90
+        for: 2m
+        labels:
+          severity: warning
+          priority: p1
+        annotations:
+          summary: "Database connection pool utilization high"
+          description: "Connection pool utilization is {{ $value }}% (threshold: 90%)"
+
+      - alert: DatabaseSlowQueries
+        expr: mysql_global_status_slow_queries / mysql_global_status_questions * 100 > 5
+        for: 5m
+        labels:
+          severity: warning
+          priority: p1
+        annotations:
+          summary: "High percentage of slow database queries"
+          description: "Slow queries percentage is {{ $value }}% (threshold: 5%)"
+
+      - alert: DatabaseDown
+        expr: mysql_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          priority: p0
+        annotations:
+          summary: "Database is down"
+          description: "MySQL database is not responding"
+
+      # Memory and Resource Alerts
+      - alert: HighMemoryUsage
+        expr: (jvm_memory_used_bytes / jvm_memory_max_bytes) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          priority: p2
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value }}% (threshold: 80%)"
+
+      - alert: CriticalMemoryUsage
+        expr: (jvm_memory_used_bytes / jvm_memory_max_bytes) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+          priority: p0
+        annotations:
+          summary: "Critical memory usage"
+          description: "Memory usage is {{ $value }}% (threshold: 95%)"
+
+      # JVM Alerts
+      - alert: HighGCTime
+        expr: rate(jvm_gc_collection_seconds_sum[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          priority: p2
+        annotations:
+          summary: "High garbage collection time"
+          description: "GC time is {{ $value }}s per second (threshold: 0.1s)"
+
+      # Network Alerts
+      - alert: HighNetworkErrors
+        expr: rate(node_network_receive_errs_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          priority: p2
+        annotations:
+          summary: "High network error rate"
+          description: "Network errors: {{ $value }} per second (threshold: 10)"
+
+      # Disk Alerts
+      - alert: HighDiskUsage
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 20
+        for: 5m
+        labels:
+          severity: warning
+          priority: p1
+        annotations:
+          summary: "High disk usage"
+          description: "Disk usage is {{ $value }}% (threshold: 80%)"
+
+      # Custom Business Logic Alerts
+      - alert: OrderProcessingDelay
+        expr: histogram_quantile(0.95, sum(rate(order_processing_duration_seconds_bucket[5m])) by (le)) > 5
+        for: 5m
+        labels:
+          severity: warning
+          priority: p1
+        annotations:
+          summary: "Order processing delay detected"
+          description: "P95 order processing time is {{ $value }}s (threshold: 5s)"
+
+      - alert: PaymentFailureRate
+        expr: (sum(rate(payment_requests_total{status="failed"}[5m])) / sum(rate(payment_requests_total[5m]))) * 100 > 2
+        for: 5m
+        labels:
+          severity: critical
+          priority: p0
+        annotations:
+          summary: "High payment failure rate"
+          description: "Payment failure rate is {{ $value }}% (threshold: 2%)"
+
+  - name: infrastructure-alerts
+    rules:
+      # Kubernetes Alerts
+      - alert: PodCrashLooping
+        expr: rate(kube_pod_container_status_restarts_total[15m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          priority: p1
+        annotations:
+          summary: "Pod is crash looping"
+          description: "Pod {{ $labels.pod }} is restarting frequently"
+
+      - alert: NodeNotReady
+        expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          priority: p0
+        annotations:
+          summary: "Node is not ready"
+          description: "Node {{ $labels.node }} is not ready"
+
+      # Load Balancer Alerts
+      - alert: LoadBalancerBackendDown
+        expr: oci_load_balancer_backend_health_status == 0
+        for: 2m
+        labels:
+          severity: warning
+          priority: p1
+        annotations:
+          summary: "Load balancer backend is down"
+          description: "Backend {{ $labels.backend }} is unhealthy"
+
+      # API Gateway Alerts
+      - alert: APIGatewayHighLatency
+        expr: histogram_quantile(0.95, sum(rate(api_gateway_request_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 5m
+        labels:
+          severity: warning
+          priority: p1
+        annotations:
+          summary: "API Gateway high latency"
+          description: "API Gateway P95 latency is {{ $value }}s (threshold: 1s)" 

@@ -1,0 +1,60 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: kafka-broker-outage
+  namespace: chaos-testing
+spec:
+  action: partition
+  mode: one
+  selector:
+    namespaces:
+      - kafka
+    labelSelectors:
+      app: kafka-broker
+  duration: "5m"
+  scheduler:
+    cron: "@every 30m"
+  networkDelay:
+    latency: "100ms"
+    correlation: "100"
+    jitter: "0ms"
+  networkLoss:
+    loss: "100"
+    correlation: "100"
+---
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: kafka-broker-restart
+  namespace: chaos-testing
+spec:
+  action: pod-failure
+  mode: one
+  selector:
+    namespaces:
+      - kafka
+    labelSelectors:
+      app: kafka-broker
+  duration: "2m"
+  scheduler:
+    cron: "@every 15m"
+---
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: kafka-cpu-stress
+  namespace: chaos-testing
+spec:
+  mode: one
+  selector:
+    namespaces:
+      - kafka
+    labelSelectors:
+      app: kafka-broker
+  stressors:
+    cpu:
+      workers: 2
+      load: 80
+  duration: "3m"
+  scheduler:
+    cron: "@every 20m" 
