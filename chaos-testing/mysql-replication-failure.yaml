@@ -1,0 +1,26 @@
+chaos_test_content = """
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: mysql-replication-failure
+  namespace: litmus
+spec:
+  appinfo:
+    appns: mysql
+    applabel: "app=mysql"
+    appkind: statefulset
+  chaosServiceAccount: litmus-admin
+  experiments:
+    - name: mysql-pod-failure
+      spec:
+        components:
+          env:
+            - name: TOTAL_CHAOS_DURATION
+              value: "60"
+            - name: CHAOS_INTERVAL
+              value: "10"
+            - name: FORCE
+              value: "true"
+            - name: TARGET_CONTAINER
+              value: "mysql"
+"""

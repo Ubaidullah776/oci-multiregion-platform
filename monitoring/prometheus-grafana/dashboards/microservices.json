@@ -1,0 +1,101 @@
+{
+  "id": null,
+  "title": "Spring Boot Microservices Overview",
+  "tags": ["spring-boot", "microservices", "monitoring"],
+  "timezone": "browser",
+  "schemaVersion": 30,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "graph",
+      "title": "HTTP Request Rate",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "rate(http_server_requests_seconds_count[1m])",
+          "legendFormat": "{{method}} {{uri}}",
+          "interval": ""
+        }
+      ],
+      "xaxis": {
+        "mode": "time"
+      },
+      "yaxes": [
+        {
+          "format": "ops",
+          "label": "req/sec"
+        },
+        {
+          "format": "short"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "graph",
+      "title": "Response Time (95th Percentile)",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le, uri))",
+          "legendFormat": "{{uri}}",
+          "interval": ""
+        }
+      ],
+      "xaxis": {
+        "mode": "time"
+      },
+      "yaxes": [
+        {
+          "format": "s",
+          "label": "seconds"
+        },
+        {
+          "format": "short"
+        }
+      ],
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      }
+    },
+    {
+      "type": "graph",
+      "title": "JVM Memory Usage",
+      "datasource": "Prometheus",
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes / jvm_memory_max_bytes",
+          "legendFormat": "{{area}}",
+          "interval": ""
+        }
+      ],
+      "xaxis": {
+        "mode": "time"
+      },
+      "yaxes": [
+        {
+          "format": "percent",
+          "label": "Memory Usage"
+        },
+        {
+          "format": "short"
+        }
+      ],
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 8
+      }
+    }
+  ]
+}
