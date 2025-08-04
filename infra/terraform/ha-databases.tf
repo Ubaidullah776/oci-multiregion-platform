@@ -48,6 +48,65 @@ resource "oci_mysql_db_system" "mysql_secondary" {
   }
 }
 
+# OCI NoSQL Database (DynamoDB-equivalent)
+resource "oci_nosql_table" "microservices_table" {
+  compartment_id = var.compartment_id
+  name           = "microservices-data"
+  ddl_statement  = <<EOF
+    CREATE TABLE microservices-data (
+      id STRING,
+      data JSON,
+      created_at TIMESTAMP,
+      updated_at TIMESTAMP,
+      PRIMARY KEY (id)
+    )
+  EOF
+  
+  table_limits {
+    max_read_units     = 50
+    max_write_units    = 50
+    max_storage_in_gbs = 1
+  }
+}
+
+# OCI Object Storage for Large File Handling
+resource "oci_objectstorage_bucket" "file_storage" {
+  compartment_id = var.compartment_id
+  name           = "microservices-file-storage"
+  namespace      = data.oci_objectstorage_namespace.ns.namespace
+  access_type    = "NoPublicAccess"
+  
+  versioning = "Enabled"
+  
+  object_events_enabled = true
+  
+  retention_rules {
+    display_name = "File Retention Policy"
+    duration {
+      time_amount = 365
+      time_unit   = "DAYS"
+    }
+  }
+}
+
+# OCI Object Storage for Backup Storage
+resource "oci_objectstorage_bucket" "backup_storage" {
+  compartment_id = var.compartment_id
+  name           = "microservices-backup-storage"
+  namespace      = data.oci_objectstorage_namespace.ns.namespace
+  access_type    = "NoPublicAccess"
+  
+  versioning = "Enabled"
+  
+  retention_rules {
+    display_name = "Backup Retention Policy"
+    duration {
+      time_amount = 90
+      time_unit   = "DAYS"
+    }
+  }
+}
+
 # Kafka Cluster
 resource "oci_streaming_stream" "kafka_stream" {
   compartment_id = var.compartment_id
@@ -224,4 +283,8 @@ data "oci_core_images" "ubuntu" {
   state                   = "AVAILABLE"
   sort_by                 = "TIMECREATED"
   sort_order              = "DESC"
+}
+
+data "oci_objectstorage_namespace" "ns" {
+  compartment_id = var.compartment_id
 } 
