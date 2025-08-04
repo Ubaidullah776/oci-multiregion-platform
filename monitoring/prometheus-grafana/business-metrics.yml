@@ -1,0 +1,182 @@
+# Business Metrics Configuration
+# This file defines business-specific metrics and dashboards for the microservices platform
+
+# Business Metrics Recording Rules
+groups:
+  - name: business-metrics
+    rules:
+      # Revenue Metrics
+      - record: business:revenue_total
+        expr: sum(increase(payment_amount_total[24h])) by (service)
+      
+      - record: business:revenue_rate
+        expr: rate(payment_amount_total[5m])
+      
+      - record: business:average_order_value
+        expr: sum(increase(payment_amount_total[1h])) by (service) / sum(increase(order_count_total[1h])) by (service)
+      
+      # Order Metrics
+      - record: business:orders_total
+        expr: sum(increase(order_count_total[24h])) by (service)
+      
+      - record: business:orders_rate
+        expr: rate(order_count_total[5m])
+      
+      - record: business:order_success_rate
+        expr: sum(increase(order_success_total[5m])) by (service) / sum(increase(order_count_total[5m])) by (service)
+      
+      # User Metrics
+      - record: business:active_users
+        expr: count(count by (user_id) (increase(user_login_total[1h])))
+      
+      - record: business:new_users
+        expr: sum(increase(user_registration_total[24h])) by (service)
+      
+      - record: business:user_retention_rate
+        expr: sum(increase(user_returning_total[7d])) by (service) / sum(increase(user_total[7d])) by (service)
+      
+      # Product Metrics
+      - record: business:product_views
+        expr: sum(increase(product_view_total[1h])) by (product_id)
+      
+      - record: business:product_conversion_rate
+        expr: sum(increase(product_purchase_total[1h])) by (product_id) / sum(increase(product_view_total[1h])) by (product_id)
+      
+      - record: business:inventory_level
+        expr: product_stock_quantity
+      
+      # Cost Metrics
+      - record: business:infrastructure_cost_per_request
+        expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (pod) * 0.1 + sum(rate(container_memory_usage_bytes[5m])) by (pod) * 0.0001
+      
+      - record: business:database_cost_per_transaction
+        expr: sum(rate(mysql_connections_total[5m])) by (instance) * 0.05
+      
+      - record: business:storage_cost_per_gb
+        expr: sum(container_fs_usage_bytes) by (pod) * 0.0001 / 1024 / 1024 / 1024
+      
+      # SLA Metrics
+      - record: business:sla_availability
+        expr: sum(rate(http_requests_total{status=~"2..|3.."}[5m])) by (service) / sum(rate(http_requests_total[5m])) by (service)
+      
+      - record: business:sla_latency_p95
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))
+      
+      - record: business:sla_error_rate
+        expr: sum(rate(http_requests_total{status=~"4..|5.."}[5m])) by (service) / sum(rate(http_requests_total[5m])) by (service)
+      
+      # Business KPIs
+      - record: business:kpi_customer_satisfaction
+        expr: sum(increase(customer_rating_total[24h])) by (service) / sum(increase(customer_rating_count[24h])) by (service)
+      
+      - record: business:kpi_customer_lifetime_value
+        expr: sum(increase(payment_amount_total[30d])) by (user_id) / count(count by (user_id) (increase(user_registration_total[30d])))
+      
+      - record: business:kpi_churn_rate
+        expr: sum(increase(user_churn_total[30d])) by (service) / sum(increase(user_total[30d])) by (service)
+      
+      - record: business:kpi_gross_margin
+        expr: (sum(increase(payment_amount_total[24h])) by (service) - sum(increase(order_cost_total[24h])) by (service)) / sum(increase(payment_amount_total[24h])) by (service)
+
+# Cost Optimization Alerts
+  - name: cost-optimization-alerts
+    rules:
+      # High Resource Utilization
+      - alert: HighCPUUtilization
+        expr: avg(rate(container_cpu_usage_seconds_total[5m])) by (pod) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          cost_center: platform
+        annotations:
+          summary: "High CPU utilization detected"
+          description: "Pod {{ $labels.pod }} has high CPU utilization ({{ $value }}%)"
+      
+      # Low Resource Utilization (Right-sizing opportunity)
+      - alert: LowCPUUtilization
+        expr: avg(rate(container_cpu_usage_seconds_total[5m])) by (pod) < 0.2
+        for: 15m
+        labels:
+          severity: info
+          cost_center: platform
+        annotations:
+          summary: "Low CPU utilization detected"
+          description: "Pod {{ $labels.pod }} has low CPU utilization ({{ $value }}%) - consider right-sizing"
+      
+      - alert: LowMemoryUtilization
+        expr: avg(container_memory_usage_bytes / container_spec_memory_limit_bytes) by (pod) < 0.3
+        for: 15m
+        labels:
+          severity: info
+          cost_center: platform
+        annotations:
+          summary: "Low memory utilization detected"
+          description: "Pod {{ $labels.pod }} has low memory utilization ({{ $value }}%) - consider right-sizing"
+      
+      # Cost Threshold Alerts
+      - alert: CostThresholdExceeded
+        expr: sum(rate(container_cpu_usage_seconds_total[5m])) by (pod) * 0.1 + sum(rate(container_memory_usage_bytes[5m])) by (pod) * 0.0001 > 50
+        for: 5m
+        labels:
+          severity: warning
+          cost_center: platform
+        annotations:
+          summary: "Cost threshold exceeded"
+          description: "Estimated infrastructure cost per request exceeds threshold"
+      
+      # Business Impact Alerts
+      - alert: RevenueImpact
+        expr: rate(payment_amount_total[5m]) < 100
+        for: 10m
+        labels:
+          severity: critical
+          business_impact: high
+        annotations:
+          summary: "Revenue impact detected"
+          description: "Payment processing rate has dropped significantly"
+      
+      - alert: CustomerExperienceDegraded
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service)) > 1
+        for: 5m
+        labels:
+          severity: warning
+          business_impact: medium
+        annotations:
+          summary: "Customer experience degraded"
+          description: "95th percentile response time exceeds 1 second"
+
+# Business Dashboard Queries
+business_dashboard_queries:
+  # Revenue Dashboard
+  revenue_total_24h: "sum(increase(payment_amount_total[24h])) by (service)"
+  revenue_rate: "rate(payment_amount_total[5m])"
+  average_order_value: "sum(increase(payment_amount_total[1h])) by (service) / sum(increase(order_count_total[1h])) by (service)"
+  
+  # Customer Dashboard
+  active_users: "count(count by (user_id) (increase(user_login_total[1h])))"
+  new_users_24h: "sum(increase(user_registration_total[24h])) by (service)"
+  customer_satisfaction: "sum(increase(customer_rating_total[24h])) by (service) / sum(increase(customer_rating_count[24h])) by (service)"
+  
+  # Operational Dashboard
+  sla_availability: "sum(rate(http_requests_total{status=~\"2..|3..\"}[5m])) by (service) / sum(rate(http_requests_total[5m])) by (service)"
+  sla_latency_p95: "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))"
+  sla_error_rate: "sum(rate(http_requests_total{status=~\"4..|5..\"}[5m])) by (service) / sum(rate(http_requests_total[5m])) by (service)"
+  
+  # Cost Dashboard
+  infrastructure_cost_per_request: "sum(rate(container_cpu_usage_seconds_total[5m])) by (pod) * 0.1 + sum(rate(container_memory_usage_bytes[5m])) by (pod) * 0.0001"
+  database_cost_per_transaction: "sum(rate(mysql_connections_total[5m])) by (instance) * 0.05"
+  storage_cost_per_gb: "sum(container_fs_usage_bytes) by (pod) * 0.0001 / 1024 / 1024 / 1024"
+  
+  # Business KPIs
+  customer_lifetime_value: "sum(increase(payment_amount_total[30d])) by (user_id) / count(count by (user_id) (increase(user_registration_total[30d])))"
+  churn_rate: "sum(increase(user_churn_total[30d])) by (service) / sum(increase(user_total[30d])) by (service)"
+  gross_margin: "(sum(increase(payment_amount_total[24h])) by (service) - sum(increase(order_cost_total[24h])) by (service)) / sum(increase(payment_amount_total[24h])) by (service)"
+
+# Cost Allocation Tags
+cost_allocation:
+  tags:
+    environment: ["production", "staging", "development"]
+    service: ["microservices", "database", "messaging", "monitoring", "storage"]
+    cost_center: ["platform", "development", "operations"]
+    business_unit: ["ecommerce", "marketing", "operations"]
+    project: ["microservices-platform", "cost-optimization", "sre-implementation"] 

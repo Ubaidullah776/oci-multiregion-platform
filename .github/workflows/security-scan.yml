@@ -1,0 +1,211 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly security scan
+
+jobs:
+  # Dependency Vulnerability Scanning
+  dependency-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Run OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: 'Microservices Platform'
+          path: '.'
+          format: 'HTML'
+          out: 'reports'
+
+      - name: Upload dependency scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-scan-results
+          path: reports/
+
+  # Container Image Security Scanning
+  container-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t myapp-service:security-scan .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'myapp-service:security-scan'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-scan-results
+          path: trivy-results.sarif
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-fs-results.sarif'
+
+      - name: Upload Trivy filesystem scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-fs-scan-results
+          path: trivy-fs-results.sarif
+
+  # Infrastructure Security Scanning
+  infrastructure-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.5.0"
+
+      - name: Terraform Init
+        run: terraform init -backend=false
+
+      - name: Run Checkov security scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: infra/terraform/
+          framework: terraform
+          output_format: sarif
+          output_file_path: checkov-results.sarif
+
+      - name: Upload Checkov scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkov-scan-results
+          path: checkov-results.sarif
+
+  # Kubernetes Security Scanning
+  k8s-security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Kubesec security scan
+        uses: controlplaneio/kubesec-action@master
+        with:
+          input: helm/microservice/templates/
+          output: kubesec-results.json
+
+      - name: Upload Kubesec scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubesec-scan-results
+          path: kubesec-results.json
+
+  # SAST (Static Application Security Testing)
+  sast-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Semgrep SAST scan
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/owasp-top-ten
+          output-format: sarif
+          output-file: semgrep-results.sarif
+
+      - name: Upload Semgrep scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-scan-results
+          path: semgrep-results.sarif
+
+  # Secrets Detection
+  secrets-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run TruffleHog secrets scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          args: --only-verified --format json --output trufflehog-results.json
+
+      - name: Upload TruffleHog scan results
+        uses: actions/upload-artifact@v4
+        with:
+          name: trufflehog-scan-results
+          path: trufflehog-results.json
+
+  # Security Report Generation
+  security-report:
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, container-scan, infrastructure-scan, k8s-security-scan, sast-scan, secrets-scan]
+    if: always()
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all scan results
+        uses: actions/download-artifact@v4
+        with:
+          path: scan-results/
+
+      - name: Generate Security Report
+        run: |
+          echo "# Security Scan Report" > security-report.md
+          echo "Generated on: $(date)" >> security-report.md
+          echo "" >> security-report.md
+          echo "## Scan Summary" >> security-report.md
+          echo "- Dependency vulnerabilities: $(find scan-results -name "*dependency*" | wc -l)" >> security-report.md
+          echo "- Container vulnerabilities: $(find scan-results -name "*trivy*" | wc -l)" >> security-report.md
+          echo "- Infrastructure issues: $(find scan-results -name "*checkov*" | wc -l)" >> security-report.md
+          echo "- Kubernetes issues: $(find scan-results -name "*kubesec*" | wc -l)" >> security-report.md
+          echo "- SAST issues: $(find scan-results -name "*semgrep*" | wc -l)" >> security-report.md
+          echo "- Secrets detected: $(find scan-results -name "*trufflehog*" | wc -l)" >> security-report.md
+
+      - name: Upload Security Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: security-report.md
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('security-report.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🔒 Security Scan Results\n\n${report}\n\nPlease review all security findings before merging.`
+            }); 
