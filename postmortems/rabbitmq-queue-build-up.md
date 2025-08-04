@@ -90,23 +90,23 @@ rabbitmq_queue_consumers{queue="order-processing"}
 
 ## 📊 Impact
 
-| Metric | Before | During | After |
-|--------|--------|--------|-------|
-| Queue Depth | 0 messages | 15,000 messages | 0 messages |
-| Order Processing Time | 2 seconds | 45 seconds | 1.5 seconds |
-| Consumer Count | 3 | 1 | 10 |
-| Failed Orders | 0 | 2,847 | 0 |
+| Metric                | Before     | During         | After      |
+|--------               |--------    |--------        |-------     |
+| Queue Depth           | 0 messages | 15,000 messages| 0 messages |
+| Order Processing Time | 2 seconds  | 45 seconds     | 1.5 seconds|
+| Consumer Count        | 3          | 1              | 10         |
+| Failed Orders         | 0          | 2,847          | 0          |
 
 ---
 
 ## ✅ Action Items
 
-| Owner | Task | Priority | Status |
-|-------|------|----------|--------|
-| Platform Team | Implement auto-scaling for RabbitMQ consumers | High | ☐ Open |
-| SRE Team | Add queue depth and consumer health alerts | High | ✅ Done |
-| DevOps Team | Create RabbitMQ health check endpoints | Medium | ☐ Open |
-| App Team | Implement message retry and dead letter queues | Medium | ☐ Open |
+| Owner         |                Task                            | Priority | Status  |
+|-------        |------                                          |----------|-------- |
+| Platform Team | Implement auto-scaling for RabbitMQ consumers  | High     | ☐ Open |
+| SRE Team      | Add queue depth and consumer health alerts     | High     | ✅ Done|
+| DevOps Team   | Create RabbitMQ health check endpoints         | Medium   | ☐ Open |
+| App Team      | Implement message retry and dead letter queues | Medium   | ☐ Open |
 
 ---
 

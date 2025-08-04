@@ -86,23 +86,23 @@ redis_memory_used_bytes{instance="redis-cluster"} / redis_memory_max_bytes{insta
 
 ## 📊 Impact
 
-| Metric | Before | During | After |
-|--------|--------|--------|-------|
-| Cache Hit Rate | 95% | 65% | 98% |
-| Response Time | 50ms | 200ms | 45ms |
-| Session Failures | 0% | 15% | 0% |
-| Product Catalog Load Time | 100ms | 500ms | 80ms |
+| Metric                     | Before | During | After |
+|----------------------------|--------|--------|-------|
+| Cache Hit Rate             | 95%    | 65%    | 98%   |
+| Response Time              | 50ms   | 200ms  | 45ms  |
+| Session Failures           | 0%     | 15%    | 0%    |
+| Product Catalog Load Time  | 100ms  | 500ms  | 80ms  |
 
 ---
 
 ## ✅ Action Items
 
-| Owner | Task | Priority | Status |
-|-------|------|----------|--------|
-| Platform Team | Implement Redis cluster auto-scaling | High | ☐ Open |
-| SRE Team | Add slot migration monitoring | High | ✅ Done |
-| DevOps Team | Create Redis cluster health checks | Medium | ☐ Open |
-| App Team | Implement cache fallback mechanism | Medium | ☐ Open |
+| Owner         | Task                                 | Priority | Status |
+|-------        |------                                |----------|--------|
+| Platform Team | Implement Redis cluster auto-scaling | High     | ☐ Open |
+| SRE Team      | Add slot migration monitoring        | High     | ✅ Done |
+| DevOps Team   | Create Redis cluster health checks   | Medium   | ☐ Open |
+| App Team      | Implement cache fallback mechanism   | Medium   | ☐ Open |
 
 ---
 
