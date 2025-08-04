@@ -1,7 +1,7 @@
 # Multi-Region OKE Clusters Configuration
 # This file defines OKE clusters across multiple regions for high availability
 
-# Primary Region (US East)
+# Primary Region (Frankfurt)
 module "oke_primary" {
   source                 = "oracle-terraform-modules/oke/oci"
   compartment_id         = var.compartment_id
@@ -16,7 +16,7 @@ module "oke_primary" {
   region                 = var.primary_region
 }
 
-# Secondary Region (US West)
+# Secondary Region (Jeddah)
 module "oke_secondary" {
   source                 = "oracle-terraform-modules/oke/oci"
   compartment_id         = var.compartment_id

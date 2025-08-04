@@ -1,19 +1,19 @@
 variable "region" {
   description = "OCI region to deploy resources"
   type        = string
-  default     = "us-ashburn-1"
+  default     = "eu-frankfurt-1"
 }
 
 variable "primary_region" {
   description = "Primary OCI region for multi-region deployment"
   type        = string
-  default     = "us-ashburn-1"
+  default     = "eu-frankfurt-1"
 }
 
 variable "secondary_region" {
   description = "Secondary OCI region for multi-region deployment"
   type        = string
-  default     = "us-phoenix-1"
+  default     = "me-jeddah-1"
 }
 
 variable "compartment_id" {

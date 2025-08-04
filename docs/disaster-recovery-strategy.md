@@ -19,13 +19,13 @@ This document outlines the disaster recovery (DR) strategy for our multi-region 
 
 ## Multi-Region Architecture
 
-### Primary Region (US East - Ashburn)
+### Primary Region (Frankfurt)
 - **Purpose**: Primary production environment
 - **Services**: All microservices, primary databases
 - **Load**: 70% of traffic
 - **Backup Strategy**: Real-time replication to secondary
 
-### Secondary Region (US West - Phoenix)
+### Secondary Region (Jeddah)
 - **Purpose**: Disaster recovery and load balancing
 - **Services**: Standby microservices, replicated databases
 - **Load**: 30% of traffic
